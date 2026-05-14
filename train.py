@@ -75,9 +75,6 @@ if __name__ == '__main__':
 
     class_weights = train_dataset.class_weights.to(device)
 
-    # pos_weight_boost reduced from 3.0 → 1.0
-    # The inverse-frequency weight (~31.85) is already sufficient;
-    # an extra 3x multiplier was causing the model to predict everything as change.
     pos_boost = cfg.get("pos_weight_boost", 1.0)
     class_weights[1] = class_weights[1] * pos_boost
 
@@ -85,9 +82,9 @@ if __name__ == '__main__':
     print(f"  No-Change weight : {class_weights[0]:.4f}")
     print(f"  Change weight    : {class_weights[1]:.4f}")
 
-    # ============================================================
+    
     # DATALOADERS
-    # ============================================================
+    
     batch_size  = cfg["batch_size"]
     num_workers = cfg.get("num_workers", 0)
 
@@ -108,18 +105,18 @@ if __name__ == '__main__':
         pin_memory=(device.type == "cuda")
     )
 
-    # ============================================================
+    
     # MODEL
-    # ============================================================
+    
     print("\nInitialising model...")
     model = SiameseChangeDetector(use_gnn=cfg.get("use_gnn", True)).to(device)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Trainable parameters: {num_params:,}")
 
-    # ============================================================
+    
     # OPTIMIZER
-    # ============================================================
+    
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -127,9 +124,9 @@ if __name__ == '__main__':
         weight_decay=cfg.get("weight_decay", 1e-4),
     )
 
-    # ============================================================
+    
     # LR SCHEDULER
-    # ============================================================
+    
 
     scheduler = CosineAnnealingWarmRestarts(
         optimizer,
@@ -142,16 +139,13 @@ if __name__ == '__main__':
     edge_index = create_grid_graph(H=grid_size, W=grid_size).to(device)
     print(f"\nGNN grid: {grid_size}x{grid_size}  |  edge_index: {edge_index.shape}")
 
-    # Default threshold raised from 0.5 → 0.65 to reduce over-prediction of change class.
-    # This is overridden each epoch by find_best_threshold().
+    
     DETECTION_THRESHOLD = cfg.get("detection_threshold", 0.65)
     GRAD_CLIP = cfg.get("grad_clip", 1.0)
 
-    # ============================================================
+    
     # THRESHOLD SEARCH
-    # Sweeps candidate thresholds on the val set and returns the
-    # one that maximises F1, along with its probability outputs.
-    # ============================================================
+    
 
     def find_best_threshold(all_probs, all_targets,
                             thresholds=np.arange(0.3, 0.91, 0.05)):
@@ -166,7 +160,7 @@ if __name__ == '__main__':
               f"(F1 = {best_f1:.4f})")
         return best_thresh, best_f1
 
-    # ============================================================
+    
     # VALIDATION
     # ============================================================
 
@@ -340,7 +334,7 @@ if __name__ == '__main__':
 
     checkpoint = torch.load("hybrid_model_best.pth", map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
-    # Restore the threshold that was optimal when this checkpoint was saved
+    
     DETECTION_THRESHOLD = checkpoint.get("best_threshold", best_threshold)
     model.eval()
 
