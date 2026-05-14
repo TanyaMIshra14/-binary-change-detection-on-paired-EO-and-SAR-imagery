@@ -5,6 +5,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import yaml
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from data_preprocessing import ChangeDetectionDataset
@@ -59,15 +62,14 @@ test_loader = DataLoader(
     test_dataset,
     batch_size=batch_size,
     shuffle=False,
-    num_workers=cfg.get("num_workers", 2),
+    num_workers=0,
 )
 
 print(f"Test samples: {len(test_dataset)}")
 
 model = SiameseChangeDetector(use_gnn=cfg.get("use_gnn", True)).to(device)
 
-ckpt = torch.load(args.weights, map_location=device)
-# Support both raw state_dict and our checkpoint dict format
+ckpt = torch.load(args.weights, map_location=device, weights_only=False)
 state_dict = ckpt.get("model_state_dict", ckpt)
 model.load_state_dict(state_dict)
 model.eval()
@@ -99,11 +101,10 @@ with torch.no_grad():
 
 elapsed = time.time() - t0
 
-metrics = compute_metrics(
-    np.array(all_preds),
-    np.array(all_targets),
-    verbose=True,
-)
+all_preds_np   = np.array(all_preds)
+all_targets_np = np.array(all_targets)
+
+metrics = compute_metrics(all_preds_np, all_targets_np, verbose=True)
 
 print("\n" + "=" * 70)
 print("FINAL TEST RESULTS")
@@ -114,7 +115,70 @@ print(f"  Recall    : {metrics['recall']:.4f}")
 print(f"  F1 Score  : {metrics['f1']:.4f}")
 print(f"  IoU       : {metrics['iou']:.4f}")
 
-print_confusion_matrix(np.array(all_preds), np.array(all_targets))
+print_confusion_matrix(all_preds_np, all_targets_np)
+
+# ── Confusion Matrix Visualisation ──────────────────────────────────────────
+
+def plot_confusion_matrix(preds, targets, save_path="confusion_matrix.png"):
+    cm = confusion_matrix(targets.astype(int), preds.astype(int))
+
+    # Raw counts plot
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle("Confusion Matrix — EO-SAR Change Detection", fontsize=14, fontweight="bold")
+
+    labels = ["No Change", "Change"]
+
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=labels,
+        yticklabels=labels,
+        linewidths=0.5,
+        linecolor="grey",
+        ax=axes[0],
+    )
+    axes[0].set_title("Counts")
+    axes[0].set_xlabel("Predicted Label")
+    axes[0].set_ylabel("True Label")
+
+    # Normalised (row-wise recall) plot
+    cm_norm = cm.astype(float) / cm.sum(axis=1, keepdims=True)
+    sns.heatmap(
+        cm_norm,
+        annot=True,
+        fmt=".2%",
+        cmap="Blues",
+        xticklabels=labels,
+        yticklabels=labels,
+        linewidths=0.5,
+        linecolor="grey",
+        vmin=0,
+        vmax=1,
+        ax=axes[1],
+    )
+    axes[1].set_title("Normalised (row %)")
+    axes[1].set_xlabel("Predicted Label")
+    axes[1].set_ylabel("True Label")
+
+    # Annotate key metrics below the plots
+    tn, fp, fn, tp = cm.ravel()
+    stats = (
+        f"TP={tp:,}  FP={fp:,}  FN={fn:,}  TN={tn:,}  |  "
+        f"F1={metrics['f1']:.4f}  IoU={metrics['iou']:.4f}  "
+        f"Precision={metrics['precision']:.4f}  Recall={metrics['recall']:.4f}"
+    )
+    fig.text(0.5, 0.01, stats, ha="center", fontsize=10, color="dimgray")
+
+    plt.tight_layout(rect=[0, 0.04, 1, 1])
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    print(f"\nConfusion matrix saved → {save_path}")
+    plt.show()
+
+plot_confusion_matrix(all_preds_np, all_targets_np)
+
+# ────────────────────────────────────────────────────────────────────────────
 
 test_end = datetime.now()
 print(f"\nTest Start Time    : {test_start}")
