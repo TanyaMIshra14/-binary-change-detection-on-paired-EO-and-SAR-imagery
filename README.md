@@ -241,7 +241,7 @@ Training pipeline includes:
 - Dynamic threshold optimisation
 - Learning rate scheduling
 - Gradient clipping
-- Best checkpoint saving
+- Best checkpoint saving(saved only for 20 epochs due to computational constraints)
 
 ---
 
