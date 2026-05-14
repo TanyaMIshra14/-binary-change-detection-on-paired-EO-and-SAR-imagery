@@ -270,7 +270,7 @@ python predict.py \
 Download the final trained checkpoint from:
 
 ```text
-Add Google Drive / HuggingFace link here
+https://drive.google.com/file/d/1pKlG52jn6FktAd7pvPQK59sX65_94MQL/view?usp=sharing
 ```
 
 # Results
@@ -279,21 +279,19 @@ Add Google Drive / HuggingFace link here
 
 | Metric | Score |
 |---|---|
-| Accuracy | Add value |
-| Precision | Add value |
-| Recall | Add value |
-| F1 Score | Add value |
-| IoU | Add value |
+| Precision | 0.4760  |
+| Recall |0.5828 |
+| F1 Score | 0.5240 |
+| IoU | 0.3550 |
 
 ## Test Metrics
 
 | Metric | Score |
 |---|---|
-| Accuracy | Add value |
-| Precision | Add value |
-| Recall | Add value |
-| F1 Score | Add value |
-| IoU | Add value |
+| Precision | 0.0288 |
+| Recall | 0.3597  |
+| F1 Score | 0.0534 |
+| IoU | 0.0274 |
 
 ---
 
