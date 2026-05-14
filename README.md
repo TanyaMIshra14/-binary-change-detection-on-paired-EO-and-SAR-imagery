@@ -31,7 +31,6 @@ The implementation is designed to be modular, reproducible, and easy to extend.
 ├── losses.py
 ├── metrices.py
 ├── model.py
-├── predict.py
 ├── requirements.txt
 ├── test.py
 └── train.py
